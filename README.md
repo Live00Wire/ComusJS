@@ -4,7 +4,7 @@
 Build resilient, host-authoritative peer-to-peer multiplayer games in JavaScript over WebRTC. No dedicated servers required!
 
 <p align="center">
-  <a href="https://github.com/Live00Wire/ComusJS/example"><img src="./media/connect4-demo.gif"></a>
+  <a href="https://github.com/Live00Wire/ComusJS"><img src="./example/media/connect4-demo.gif"></a>
 </p>
 <p align="center">
   <a href="https://live00wire.github.io/ComusJS/example/">[CHECK OUT THE CONNECT 4 DEMO]</a>
