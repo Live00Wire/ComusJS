@@ -1,0 +1,28 @@
+{
+  "name": "comusjs",
+  "version": "1.0.0",
+  "description": "A resilient, host-authoritative peer-to-peer multiplayer game engine over WebRTC.",
+  "main": "comus.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Live00Wire/ComusJS.git"
+  },
+  "keywords": [
+    "webrtc",
+    "multiplayer",
+    "peer-to-peer",
+    "p2p",
+    "game-engine",
+    "host-migration",
+    "netcode"
+  ],
+  "author": "LIVE00WIRE <hello@live00wire.dev>",
+  "license": "MIT",
+  "dependencies": {
+    "peerjs": "^1.5.2"
+  }
+}

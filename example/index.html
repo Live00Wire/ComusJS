@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ComusJS - Connect 4 Example</title>
+  
+  <!-- PeerJS is the only external dependency for WebRTC signaling -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  
+  <style>
+    /* --- Base Styles --- */
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #e9ecef; color: #212529; margin: 0; padding: 40px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    
+    .app-container {
+      background: white; padding: 32px; border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 600px;
+    }
+
+    h2 { text-align: center; margin-top: 0; color: #343a40; }
+
+    /* --- Avatar Creator Styles --- */
+    .avatar-preview-container {
+      width: 140px; height: 140px; margin: 0 auto 16px auto;
+      background: #fff; border-radius: 50%; border: 4px solid #e9ecef;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .control-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px; background: #f8f9fa; border-radius: 8px; padding: 6px 8px;
+    }
+    .control-label { font-weight: 600; color: #495057; font-size: 14px; user-select: none; }
+    .arrow-btn {
+      background: #e9ecef; border: none; border-radius: 6px; width: 28px; height: 28px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .arrow-btn:hover { background: #dee2e6; }
+    
+    /* --- Form Controls --- */
+    input {
+      padding: 12px 16px; border: 2px solid #dee2e6; border-radius: 8px;
+      font-size: 16px; width: 100%; box-sizing: border-box; margin-top: 16px; outline: none;
+    }
+    input:focus { border-color: #0d6efd; }
+    
+    button {
+      border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+      cursor: pointer; color: white; transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .primary-btn { width: 100%; padding: 12px; margin-top: 16px; }
+    #btn-continue { background-color: #6f42c1; }
+    #btn-create { background-color: #198754; margin-top: 0; }
+    #btn-join { background-color: #0d6efd; margin-top: 0; }
+    #btn-leave { background-color: #dc3545; padding: 8px 16px; font-size: 14px; }
+    #btn-start { background-color: #ffc107; color: #000; padding: 8px 16px; font-size: 14px; display: none; }
+
+    .join-row { display: flex; gap: 12px; margin-top: 16px; align-items: stretch; }
+    .divider { text-align: center; margin: 24px 0; color: #adb5bd; font-weight: 600; text-transform: uppercase; }
+
+    /* --- Room Lobby Styles --- */
+    .room-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e9ecef;
+    }
+    #text-room-id { font-size: 20px; font-weight: 700; margin: 0; }
+    #lobby-grid { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
+
+    /* --- Connect 4 Board Styles --- */
+    .game-status {
+      text-align: center; font-size: 20px; font-weight: bold;
+      margin-bottom: 24px; padding: 12px; border-radius: 8px; background: #f8f9fa;
+    }
+    
+    .c4-board {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;
+      background: #0d6efd; padding: 12px; border-radius: 12px; width: fit-content; margin: 0 auto;
+    }
+    
+    .c4-cell {
+      width: 50px; height: 50px; background: white; border-radius: 50%;
+      cursor: pointer; transition: transform 0.1s;
+      box-shadow: inset 0 4px 6px rgba(0,0,0,0.2);
+    }
+    .c4-cell:hover { transform: scale(0.9); }
+    .token-p1 { background: #dc3545; }
+    .token-p2 { background: #ffc107; }
+    
+    .winning-cell {
+      border: 4px solid #fff; box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.9);
+      transform: scale(1.15); z-index: 10;
+    }
+
+    /* --- Global Chat Styles --- */
+    #chat-messages {
+      height: 150px; overflow-y: auto; background: #f8f9fa; 
+      border-radius: 8px; padding: 12px; margin-bottom: 8px; 
+      display: flex; flex-direction: column; gap: 8px; font-size: 14px;
+    }
+    .chat-bubble { padding: 6px 10px; border-radius: 12px; max-width: 80%; }
+    .chat-self { align-self: flex-end; background: #0d6efd; color: white; }
+    .chat-other { align-self: flex-start; background: #dee2e6; color: #212529; }
+    .chat-name { font-size: 11px; display: block; opacity: 0.8; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- SCREEN 1: Profile Setup -->
+    <div id="screen-profile">
+      <h2>Profile Setup</h2>
+      <div class="avatar-preview-container" id="preview"></div>
+      <div id="controls-container"></div>
+      <input type="text" id="input-name" placeholder="Your Name">
+      <button id="btn-continue" class="primary-btn">Continue</button>
+    </div>
+
+    <!-- SCREEN 2: Main Menu -->
+    <div id="screen-menu" style="display: none;">
+      <h2>Play Online</h2>
+      <button id="btn-edit-profile" style="background: none; border: none; color: #6c757d; text-decoration: underline; margin-bottom: 16px; font-size: 14px; padding: 0;">⚙️ Edit Profile</button>
+      
+      <button id="btn-create" class="primary-btn">Create New Room</button>
+      <div class="divider">or</div>
+      <div class="join-row">
+        <input type="text" id="input-room" placeholder="Enter Room ID">
+        <button id="btn-join" class="primary-btn" style="flex-shrink: 0; width: auto; padding: 0 24px;">Join</button>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: Room Lobby -->
+    <div id="screen-room" style="display: none;">
+      <div class="room-header">
+        <div>
+          <h3 id="text-room-id">Connecting...</h3>
+          <button id="btn-copy-link" style="font-size: 12px; padding: 4px 8px; margin-top: 4px; background: #e9ecef; color: #495057;">🔗 Copy Invite Link</button>
+        </div>
+        <div>
+          <button id="btn-start">Start Game</button>
+          <button id="btn-leave">Leave Room</button>
+        </div>
+      </div>
+      <div id="lobby-grid"></div>
+    </div>
+
+    <!-- SCREEN 4: Game Board -->
+    <div id="screen-game" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px;">
+        <div class="game-status" id="text-game-status" style="margin-bottom: 0; flex-grow: 1;">Waiting to start...</div>
+        <button id="btn-leave-game" style="background-color: #dc3545; color: white; padding: 8px 16px; font-size: 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600;">Leave</button>
+      </div>
+      
+      <button id="btn-vote-rematch" class="primary-btn" style="display: none; margin-bottom: 24px; background-color: #28a745;">Vote for Rematch</button>
+      <div class="c4-board" id="c4-board"></div>
+    </div>
+
+    <!-- GLOBAL CHAT WIDGET -->
+    <div id="chat-container" style="display: none; margin-top: 24px; border-top: 2px solid #e9ecef; padding-top: 16px;">
+      <div id="chat-messages"></div>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="input-chat" placeholder="Type a message..." style="margin-top: 0; padding: 8px 12px; font-size: 14px;">
+        <button id="btn-send-chat" class="primary-btn" style="margin-top: 0; width: auto; padding: 0 16px;">Send</button>
+      </div>
+    </div>
+
+  </div>
+  
+  <!-- Master Controller Entry Point -->
+  <script type="module" src="index.js"></script>
+</body>
+</html>
